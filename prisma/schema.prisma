@@ -27,36 +27,31 @@ model User {
 // =========================================
 // 2. MODEL RATE ASURANSI (PREMI)
 // =========================================
-// Sumber Data: Excel AAB WIL 3, Used Komersial, Loading Komersial
-// Mencakup kategori: PASSENGER, COMMERCIAL_USED, COMMERCIAL_LOADING, 
-// COMMERCIAL_USED_TRUCK, COMMERCIAL_LOADING_BUS, dsb.
 model InsuranceRate {
   id        Int     @id @default(autoincrement())
   
   category  String  // e.g., "PASSENGER", "COMMERCIAL_USED"
-  tenor     Int     // 1, 2, 3, 4, 5 (Tahun)
-  label     String  // e.g., "5 THN COMPH", "4 THN COMPH 1 TLO"
+  tenor     Int     // Tahun
+  label     String  // e.g., "5 THN COMPH"
   
-  minPrice  Float   // Range Harga Bawah (0)
-  maxPrice  Float   // Range Harga Atas (99999999999)
-  rate      Float   // Rate dalam desimal (0.0125 = 1.25%)
+  minPrice  Float   
+  maxPrice  Float   
+  rate      Float   // Desimal (0.0125)
 
-  // Indexing untuk performa pencarian range
   @@index([category, tenor, minPrice, maxPrice])
 }
 
 // =========================================
 // 3. MODEL RATE BUNGA (INTEREST)
 // =========================================
-// Sumber Data: Tabel Bunga ADDB/ADDM Q3
 model InterestRate {
   id           Int     @id @default(autoincrement())
   
-  category     String  // "PASSENGER" atau "COMMERCIAL"
-  paymentType  String  // "ADDB" atau "ADDM"
+  category     String  // "PASSENGER", "COMMERCIAL"
+  paymentType  String  // "ADDB", "ADDM"
   
-  star         Int?    // 1-7 (Khusus Passenger). Commercial bisa null/0 atau disamakan.
-  tenor        Int     // 12, 24, 36, 48, 60 (Bulan)
+  star         Int?    // 1-7
+  tenor        Int     // Bulan (12, 24...)
   
   rate         Float   // Bunga Flat per Tahun (desimal)
 
@@ -64,18 +59,17 @@ model InterestRate {
 }
 
 // =========================================
-// 4. MODEL KONFIGURASI STAR
+// 4. MODEL CONFIG STAR (Optional)
 // =========================================
-// Menentukan aturan DP minimal untuk naik level Star
 model StarConfig {
   id          Int     @id @default(autoincrement())
-  starLevel   Int     @unique // 1, 2, 3...
-  minDp       Float   // Minimal DP dalam persen (e.g., 20.0)
-  description String? // Keterangan (Optional)
+  starLevel   Int     @unique 
+  minDp       Float   
+  description String?
 }
 
 // =========================================
-// 5. MODEL HISTORY SIMULASI
+// 5. MODEL HISTORY SIMULASI (LENGKAP)
 // =========================================
 model Simulation {
   id              Int      @id @default(autoincrement())
@@ -84,33 +78,41 @@ model Simulation {
   borrowerName    String
   coBorrowerName  String?
   salesName       String?
-  status          String   @default("TODO") // TODO, PROGRES, DONE
+  status          String   @default("TODO") // TODO, PROGRES, DONE, REJECT
 
   // --- Data Unit & Pilihan ---
   unitName        String
   nopol           String?
+  category        String   // "PASSENGER", "COMMERCIAL"
+  subCategory     String?  // "TRUCK", "BUS"
+  isLoadingUnit   Boolean  @default(false)
   
-  category        String   // "PASSENGER" / "COMMERCIAL"
-  subCategory     String?  // "PASSENGER", "TRUCK", "BUS" (Khusus Komersil)
-  isLoadingUnit   Boolean  @default(false) // True jika > 5 Tahun
-  
-  // --- Parameter Kredit ---
+  // --- Parameter Kredit (Input) ---
   vehiclePrice    Float    // Harga OTR
   dpPercent       Float    // DP Input (%)
-  tenor           Int      // Bulan (12, 24...)
-  paymentType     String   // "ADDB" / "ADDM"
-  adminFee        Float    // Biaya Admin (Inputan)
-  insuranceLabel  String?  // Pilihan Asuransi (e.g. "5 THN COMPH")
+  tenor           Int      // Bulan
+  paymentType     String   // "ADDB", "ADDM"
+  adminFee        Float 
+  insuranceLabel  String?
 
-  // --- Hasil Hitungan (Snapshot) ---
-  // Disimpan agar history tidak berubah meski rate master berubah
+  // --- Hasil Hitungan (Snapshot Lengkap) ---
   dpAmount        Float    // Nominal DP Murni
   monthlyPayment  Float    // Angsuran per Bulan
   totalFirstPay   Float    // TDP (Total Down Payment)
   
-  interestRate    Float?   // Rate Bunga yang dipakai (Snapshot)
-  insuranceRate   Float?   // Rate Asuransi yang dipakai (Snapshot)
+  interestRate    Float?   // Rate Bunga (%)
+  insuranceRate   Float?   // Rate Asuransi (%)
   insuranceAmount Float?   // Nominal Asuransi
+  
+  // Field Tambahan agar Data Lengkap
+  principalPure   Float?   // Pokok Hutang Murni (PH Murni)
+  policyFee       Float?   // Biaya Polis (AR)
+  totalAR         Float?   // Total AR (PH Murni + Asuransi + Polis)
+  totalInterest   Float?   // Total Bunga (Rupiah)
+  totalLoan       Float?   // Jumlah Hutang / PH (Total AR + Bunga)
+  policyFeeTDP    Float?   // Biaya Polis di TDP
+  firstInstallment Float?  // Angsuran Pertama (khusus ADDM)
+  nilaiAP         Float?   // Nilai AP (OTR - TDP)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
