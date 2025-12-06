@@ -1,0 +1,116 @@
+// File: prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// =========================================
+// 1. MODEL USER (SALES)
+// =========================================
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  
+  simulations Simulation[]
+}
+
+// =========================================
+// 2. MODEL RATE ASURANSI (PREMI)
+// =========================================
+// Sumber Data: Excel AAB WIL 3, Used Komersial, Loading Komersial
+model InsuranceRate {
+  id        Int     @id @default(autoincrement())
+  
+  // Kategori: "PASSENGER", "COMMERCIAL_USED", "COMMERCIAL_LOADING", 
+  // "COMMERCIAL_USED_TRUCK", "COMMERCIAL_LOADING_BUS", dll.
+  category  String  
+
+  tenor     Int     // 1, 2, 3, 4, 5 (Tahun)
+  label     String  // Contoh: "5 thn Comph"
+  
+  minPrice  Float   // Range Harga Bawah
+  maxPrice  Float   // Range Harga Atas
+  rate      Float   // Persentase (0.125 = 12.5%)
+
+  // Index untuk mempercepat pencarian rate asuransi
+  @@index([category, tenor, minPrice, maxPrice])
+}
+
+// =========================================
+// 3. MODEL RATE BUNGA (INTEREST)
+// =========================================
+// Sumber Data: Gambar 1 (Passenger) & Gambar 2 (Komersil)
+// Membedakan ADDB vs ADDM
+model InterestRate {
+  id           Int     @id @default(autoincrement())
+  
+  category     String  // "PASSENGER" atau "COMMERCIAL"
+  paymentType  String  // "ADDB" atau "ADDM" (PENTING: Pembeda baru)
+  
+  star         Int?    // 1, 2, 3... (Khusus Passenger, Commercial isi 0)
+  tenor        Int     // 12, 24, 36, 48, 60 (Bulan)
+  
+  rate         Float   // Bunga Flat per Tahun (0.08 = 8%)
+
+  @@index([category, paymentType, star, tenor])
+}
+
+// =========================================
+// 4. MODEL KONFIGURASI STAR
+// =========================================
+// Menentukan aturan DP minimal untuk setiap Star
+model StarConfig {
+  id          Int     @id @default(autoincrement())
+  starLevel   Int     @unique // 1, 2, 3...
+  minDp       Float   // Minimal DP dalam persen (Contoh: 10, 15, 20)
+  description String? // Keterangan (Optional)
+}
+
+// =========================================
+// 5. MODEL HISTORY SIMULASI
+// =========================================
+model Simulation {
+  id              Int      @id @default(autoincrement())
+  
+  // --- Data Nasabah ---
+  borrowerName    String
+  coBorrowerName  String?
+  salesName       String
+  nopol           String?
+  
+  // --- Data Unit & Pilihan ---
+  unitName        String
+  category        String   // "PASSENGER" / "COMMERCIAL"
+  subCategory     String?  // "GENERAL", "TRUCK", "BUS" (Khusus Komersil)
+  isOlderThan5    Boolean  // True jika Loading (>5 Tahun)
+  
+  paymentType     String   // "ADDB" / "ADDM"
+  starLevel       Int?     // 1, 2, 3... (Khusus Passenger)
+  
+  // --- Angka Input ---
+  vehiclePrice    Float    // Harga OTR
+  dpPercent       Float    // DP Input (%)
+  dpAmount        Float    // Nominal DP (Setelah dikali 2 jika aturan passenger berlaku)
+  tenor           Int      // Bulan
+  
+  // --- Hasil Hitungan ---
+  interestRate    Float?   // Bunga yang didapat (%)
+  insuranceRate   Float?   // Asuransi yang didapat (%)
+  insuranceAmount Float?   // Nominal Asuransi
+  monthlyPayment  Float?   // Angsuran per bulan
+  totalFirstPay   Float?   // Total Bayar Pertama (TDP)
+  
+  createdAt       DateTime @default(now())
+  
+  // Relasi ke User
+  userId          Int?
+  user            User?    @relation(fields: [userId], references: [id])
+}
