@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { User, Eye, Loader2, Trash2, Calendar, Car, DollarSign, ChevronRight } from 'lucide-react';
+import { User, Eye, Loader2, Trash2, Calendar, Car } from 'lucide-react';
 import { HistoryItem } from '@/app/types/history';
 import { UserSession } from '@/app/hooks/useAuth';
 
