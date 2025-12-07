@@ -108,6 +108,10 @@ export const useCreditSimulation = () => {
   });
 
   const [result, setResult] = useState<CalculationResult | null>(null);
+  
+  // State untuk Modal
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const roundVal = (num: number, multiple: number, direction: 'round' | 'ceil' = 'round') => {
     if (direction === 'ceil') return Math.ceil(num / multiple) * multiple;
@@ -378,11 +382,18 @@ export const useCreditSimulation = () => {
 
   const handleSave = async () => {
     console.log("--> Tombol Simpan Ditekan");
-    console.log("--> Jumlah File di State Form:", form.attachments.length);
-    console.log("--> Detail File:", form.attachments);
+    
+    // Reset state modal
+    setValidationError(null);
+    setSaveSuccess(false);
 
     if (!result) return;
-    if (!form.borrowerName) { alert("Mohon isi Nama Nasabah sebelum menyimpan."); return; }
+    
+    // Validasi Data Nasabah
+    if (!form.borrowerName || !form.salesName) { 
+        setValidationError("Mohon lengkapi Nama Nasabah dan Nama Sales sebelum menyimpan simulasi."); 
+        return; 
+    }
 
     setIsSaving(true);
     try {
@@ -429,11 +440,11 @@ export const useCreditSimulation = () => {
         }
         
         console.log("--> Berhasil Simpan!");
-        alert("Simulasi berhasil disimpan!");
-        router.push('/history'); 
+        setSaveSuccess(true);
+        // Redirect akan dilakukan via Modal
     } catch (err) {
         console.error("--> ERROR SAVE:", err);
-        alert(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan data.");
+        setValidationError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan data.");
     } finally {
         setIsSaving(false);
     }
@@ -463,6 +474,8 @@ export const useCreditSimulation = () => {
     form, setForm,
     result, setResult,
     isLoading, errorMsg, isSaving,
+    saveSuccess, setSaveSuccess,
+    validationError, setValidationError,
     availableTenors, availableInsuranceOptions,
     handleChange, handleSave, solveBudget,
     handleFileChange, removeAttachment

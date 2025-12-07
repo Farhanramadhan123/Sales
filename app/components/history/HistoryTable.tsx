@@ -1,8 +1,7 @@
-// app/components/history/HistoryTable.tsx
 "use client";
 
 import React from 'react';
-import { User, Eye, Loader2, Trash2 } from 'lucide-react';
+import { User, Eye, Loader2, Trash2, Calendar, Car, DollarSign, ChevronRight } from 'lucide-react';
 import { HistoryItem } from '@/app/types/history';
 import { UserSession } from '@/app/hooks/useAuth';
 
@@ -21,11 +20,11 @@ const toIDR = (num: number | null | undefined) => {
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
 };
 
-const formatDate = (str: string) => new Date(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+const formatDate = (str: string) => new Date(str).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'DONE': return 'bg-green-100 text-green-700 border-green-200';
+    case 'DONE': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
     case 'PROGRES': return 'bg-blue-100 text-blue-700 border-blue-200';
     case 'REJECT': return 'bg-red-100 text-red-700 border-red-200';
     default: return 'bg-slate-100 text-slate-500 border-slate-200';
@@ -37,107 +36,221 @@ export default function HistoryTable({
 }: Props) {
   
   if (isLoading) {
-    return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-blue-500"/></div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 gap-3">
+        <Loader2 className="animate-spin w-10 h-10 text-blue-600"/>
+        <p className="text-slate-400 text-sm animate-pulse">Memuat data...</p>
+      </div>
+    );
   }
 
   if (data.length === 0) {
-    return <div className="text-center py-20 text-slate-400 bg-white rounded shadow border border-dashed">Belum ada data tersimpan.</div>;
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center px-4">
+        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+          <User className="w-8 h-8 text-slate-300" />
+        </div>
+        <h3 className="text-lg font-medium text-slate-900">Belum ada data</h3>
+        <p className="text-slate-500 text-sm mt-1 max-w-xs mx-auto">
+          Mulai buat simulasi baru untuk melihat riwayat perhitungan Anda di sini.
+        </p>
+      </div>
+    );
   }
 
   const isProsesor = currentUser?.role === 'PROSESOR';
 
   return (
-    <div className="bg-white rounded-lg shadow border overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm text-left">
-          <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
-            <tr>
-              <th className="px-4 py-3 text-center">Aksi</th>
-              <th className="px-4 py-3">Tanggal</th>
-              <th className="px-4 py-3">Nasabah</th>
-              <th className="px-4 py-3">Unit</th>
-              <th className="px-4 py-3 text-right">Harga OTR</th>
-              <th className="px-4 py-3 text-right">TDP</th>
-              <th className="px-4 py-3 text-right">Angsuran</th>
-              <th className="px-4 py-3 text-center w-36">Status</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {data.map((item) => (
-              <tr key={item.id} className="hover:bg-slate-50 transition group">
-                <td className="px-4 py-3 text-center flex justify-center gap-1">
-                    {/* DETAIL: Hanya PROSESOR */}
+    <>
+      {/* Desktop View (Table) */}
+      <div className="hidden md:block bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 text-slate-600 font-semibold uppercase text-xs tracking-wider border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4 text-center w-24">Aksi</th>
+                <th className="px-6 py-4">Tanggal</th>
+                <th className="px-6 py-4">Nasabah</th>
+                <th className="px-6 py-4">Unit Kendaraan</th>
+                <th className="px-6 py-4 text-right">Harga OTR</th>
+                <th className="px-6 py-4 text-right">Angsuran</th>
+                <th className="px-6 py-4 text-center w-32">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {data.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
+                  <td className="px-6 py-4 text-center">
+                    <div className="flex justify-center gap-2">
+                      {isProsesor ? (
+                        <button 
+                            onClick={() => setSelectedItem(item)}
+                            className="p-2 bg-white text-blue-600 rounded-lg hover:bg-blue-50 transition shadow-sm border border-slate-200 hover:border-blue-200"
+                            title="Lihat Rincian"
+                        >
+                            <Eye className="w-4 h-4"/>
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded-full">View</span>
+                      )}
+
+                      {isProsesor && handleDelete && (
+                        <button 
+                            onClick={() => handleDelete(item.id)}
+                            className="p-2 bg-white text-red-600 rounded-lg hover:bg-red-50 transition shadow-sm border border-slate-200 hover:border-red-200"
+                            title="Hapus Data"
+                        >
+                            <Trash2 className="w-4 h-4"/>
+                        </button>
+                      )}
+                    </div>
+                  </td>
+                  
+                  <td className="px-6 py-4 text-slate-500 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="w-4 h-4 text-slate-400" />
+                      {formatDate(item.createdAt)}
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <div className="font-medium text-slate-900">{item.borrowerName}</div>
+                    <div className="text-xs text-slate-500 mt-0.5">ID: #{item.id}</div>
+                  </td>
+
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-blue-50 rounded-md">
+                        <Car className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <span className="text-slate-700 font-medium">{item.unitName}</span>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-4 text-right font-medium text-slate-600">
+                    {toIDR(item.vehiclePrice)}
+                  </td>
+
+                  <td className="px-6 py-4 text-right">
+                    <div className="font-bold text-slate-900">{toIDR(item.monthlyPayment)}</div>
+                    <div className="text-xs text-slate-500">{item.tenor} Bulan</div>
+                  </td>
+
+                  <td className="px-6 py-4 text-center">
                     {isProsesor ? (
-                      <button 
-                          onClick={() => setSelectedItem(item)}
-                          className="p-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-100"
-                          title="Lihat Rincian"
-                      >
-                          <Eye className="w-4 h-4"/>
-                      </button>
-                    ) : (
-                      <span className="text-[10px] text-slate-300 italic">View Only</span>
-                    )}
-
-                    {/* DELETE: Hanya PROSESOR */}
-                    {isProsesor && handleDelete && (
-                      <button 
-                          onClick={() => handleDelete(item.id)}
-                          className="p-1.5 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition shadow-sm border border-red-100"
-                          title="Hapus Data"
-                      >
-                          <Trash2 className="w-4 h-4"/>
-                      </button>
-                    )}
-                </td>
-                
-                <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
-                  {formatDate(item.createdAt)}
-                </td>
-
-                <td className="px-4 py-3">
-                  <div className="font-bold text-slate-800">{item.borrowerName}</div>
-                  <div className="text-[10px] text-slate-400 flex items-center gap-1">
-                    <User className="w-3 h-3"/> Sales: {item.salesName || '-'}
-                  </div>
-                </td>
-
-                <td className="px-4 py-3">
-                  <div className="font-medium text-slate-700">{item.unitName}</div>
-                  <div className="text-[10px] text-slate-400">{item.tenor} Bulan • DP {item.dpPercent}%</div>
-                </td>
-
-                <td className="px-4 py-3 text-right font-medium text-slate-600">{toIDR(item.vehiclePrice)}</td>
-                <td className="px-4 py-3 text-right font-bold text-blue-600">{toIDR(item.totalFirstPay)}</td>
-                <td className="px-4 py-3 text-right font-bold text-orange-600">{toIDR(item.monthlyPayment)}</td>
-
-                <td className="px-4 py-3 text-center">
-                  <div className="relative">
-                    {updatingId === item.id && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded">
-                            <Loader2 className="w-3 h-3 animate-spin text-slate-600"/>
-                        </div>
-                    )}
-                    <select 
-                        value={item.status} 
+                      <select 
+                        value={item.status}
                         onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                        disabled={!isProsesor} // SALES TIDAK BISA GANTI STATUS
-                        className={`w-full text-[10px] font-bold py-1 px-2 rounded border appearance-none text-center focus:ring-2 focus:ring-blue-500 outline-none transition-colors 
-                          ${getStatusColor(item.status)} 
-                          ${!isProsesor ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                        <option value="TODO">TODO</option>
+                        disabled={updatingId === item.id}
+                        className={`text-xs font-bold px-3 py-1.5 rounded-full border appearance-none cursor-pointer outline-none transition-all ${getStatusColor(item.status)}`}
+                      >
                         <option value="PROGRES">PROGRES</option>
                         <option value="DONE">DONE</option>
                         <option value="REJECT">REJECT</option>
-                    </select>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      </select>
+                    ) : (
+                      <span className={`text-xs font-bold px-3 py-1.5 rounded-full border ${getStatusColor(item.status)}`}>
+                        {item.status}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>
+
+      {/* Mobile View (Cards) */}
+      <div className="md:hidden space-y-4 pb-20">
+        {data.map((item) => (
+          <div 
+            key={item.id} 
+            className="bg-white rounded-2xl p-5 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.05)] border border-slate-100 active:scale-[0.99] transition-transform"
+            onClick={() => isProsesor && setSelectedItem(item)}
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-sm">
+                  {item.borrowerName.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-900">{item.borrowerName}</h3>
+                  <div className="flex items-center gap-1 text-xs text-slate-500">
+                    <Calendar className="w-3 h-3" />
+                    {formatDate(item.createdAt)}
+                  </div>
+                </div>
+              </div>
+              
+              {isProsesor ? (
+                <div onClick={(e) => e.stopPropagation()}>
+                   <select 
+                      value={item.status}
+                      onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                      disabled={updatingId === item.id}
+                      className={`text-[10px] font-bold px-2 py-1 rounded-full border appearance-none outline-none ${getStatusColor(item.status)}`}
+                    >
+                      <option value="PROGRES">PROGRES</option>
+                      <option value="DONE">DONE</option>
+                      <option value="REJECT">REJECT</option>
+                    </select>
+                </div>
+              ) : (
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full border ${getStatusColor(item.status)}`}>
+                  {item.status}
+                </span>
+              )}
+            </div>
+
+            <div className="space-y-3 mb-4">
+              <div className="flex justify-between items-center p-3 bg-slate-50 rounded-xl">
+                <div className="flex items-center gap-2 text-slate-600 text-sm">
+                  <Car className="w-4 h-4" />
+                  <span>{item.unitName}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 border border-slate-100 rounded-xl">
+                  <div className="text-xs text-slate-400 mb-1">Harga OTR</div>
+                  <div className="font-semibold text-slate-700 text-sm">{toIDR(item.vehiclePrice)}</div>
+                </div>
+                <div className="p-3 border border-blue-100 bg-blue-50/50 rounded-xl">
+                  <div className="text-xs text-blue-400 mb-1">Angsuran</div>
+                  <div className="font-bold text-blue-700 text-sm">{toIDR(item.monthlyPayment)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 pt-3 border-t border-slate-100">
+              {isProsesor ? (
+                <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); setSelectedItem(item); }}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-medium active:bg-slate-800"
+                  >
+                    <Eye className="w-4 h-4" />
+                    Rincian
+                  </button>
+                  {handleDelete && (
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                      className="p-2.5 text-red-500 bg-red-50 rounded-xl active:bg-red-100"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button className="w-full py-2 text-center text-xs text-slate-400 italic bg-slate-50 rounded-lg">
+                  View Only Mode
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

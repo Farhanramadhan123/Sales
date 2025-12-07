@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { FileText, Calculator, Save, Loader2 } from 'lucide-react';
+import { FileText, Calculator, Save, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { CalculationResult, SimulationForm } from '@/app/types/simulation';
 
 interface Props {
@@ -17,32 +17,26 @@ const toPct = (num: number) => (num * 100).toFixed(3) + '%';
 
 export default function SimulationResult({ result, form, handleSave, isSaving }: Props) {
   return (
-    <div className={`bg-white p-6 rounded shadow-lg border h-full flex flex-col ${form.mode === 'BUDGET' ? 'border-purple-200 ring-1 ring-purple-100' : 'border-slate-200'}`}>
+    <div className={`bg-white rounded-2xl shadow-xl border overflow-hidden flex flex-col transition-all duration-300 ${form.mode === 'BUDGET' ? 'border-purple-100 shadow-purple-100' : 'border-slate-100 shadow-slate-200/50'}`}>
       
       {/* Header Result */}
-      <div className="flex justify-between items-center border-b pb-4 mb-4">
+      <div className={`px-6 py-5 border-b flex justify-between items-start ${form.mode === 'BUDGET' ? 'bg-purple-50/30 border-purple-100' : 'bg-slate-50/50 border-slate-100'}`}>
           <div>
               <h3 className={`text-lg font-bold flex items-center gap-2 ${form.mode === 'BUDGET' ? 'text-purple-700' : 'text-slate-800'}`}>
                 <FileText className="w-5 h-5"/> {form.mode === 'BUDGET' ? 'Hasil Simulasi Budget' : 'Hasil Simulasi Kredit'}
               </h3>
-              {form.mode === 'BUDGET' && result && (
-                  <p className="text-xs text-purple-500 mt-1">
-                      *Rekomendasi DP: <b>{toIDR(result.dpAmount)} ({result.dpPercentCalc.toFixed(2)}%)</b> untuk mencapai target.
+              {form.mode === 'BUDGET' && result ? (
+                  <p className="text-xs text-purple-600 mt-1.5 bg-purple-100 px-2 py-1 rounded-md inline-block font-medium">
+                      Rekomendasi DP: <b>{toIDR(result.dpAmount)} ({result.dpPercentCalc.toFixed(2)}%)</b>
                   </p>
+              ) : (
+                <p className="text-xs text-slate-400 mt-1">Rincian perhitungan kredit kendaraan</p>
               )}
           </div>
           {result && (
-              <div className="flex gap-2 items-center">
-                  <button 
-                    onClick={handleSave} 
-                    disabled={isSaving}
-                    className="flex items-center gap-1 px-4 py-2 bg-green-600 text-white rounded text-xs font-bold hover:bg-green-700 transition disabled:opacity-50"
-                  >
-                    {isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : <Save className="w-4 h-4"/>}
-                    {isSaving ? 'Menyimpan...' : 'SIMPAN HASIL'}
-                  </button>
-                  
-                  <div className={`px-3 py-1 rounded text-xs font-bold ${result.isSpecialScenario ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'}`}>
+              <div className="flex flex-col items-end gap-2">
+                  <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide flex items-center gap-1 ${result.isSpecialScenario ? 'bg-yellow-100 text-yellow-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {result.isSpecialScenario && <AlertTriangle className="w-3 h-3"/>}
                       STAR {result.starLevel}
                   </div>
               </div>
@@ -51,100 +45,131 @@ export default function SimulationResult({ result, form, handleSave, isSaving }:
 
       {/* Content Result */}
       {!result ? (
-        <div className="flex-1 flex flex-col items-center justify-center text-slate-400 opacity-60">
-            <Calculator className="w-16 h-16 mb-4"/>
-            <p>{form.mode === 'BUDGET' ? 'Masukkan Target & Tekan Hitung' : 'Masukkan Harga OTR'}</p>
+        <div className="p-12 flex flex-col items-center justify-center text-slate-300 min-h-[400px]">
+            <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+              <Calculator className="w-10 h-10 text-slate-300"/>
+            </div>
+            <p className="text-slate-400 font-medium text-center max-w-xs">
+              {form.mode === 'BUDGET' ? 'Masukkan target budget Anda dan tekan tombol hitung' : 'Masukkan Harga OTR dan parameter lainnya untuk melihat hasil'}
+            </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <tbody>
-              <tr className="border-b bg-slate-50">
-                <td className="py-3 px-2 font-bold text-slate-700">Harga Kendaraan</td>
-                <td className="py-3 px-2 font-bold text-right text-slate-900">{toIDR(result.vehiclePrice)}</td>
-              </tr>
-              <tr className={`border-b ${form.mode === 'BUDGET' ? 'bg-purple-50' : ''}`}>
-                <td className="py-2 px-2 pl-4 text-slate-500">Uang Muka ({result.dpPercentCalc.toFixed(2)}%)</td>
-                <td className="py-2 px-2 text-right font-bold text-slate-700">{toIDR(result.dpAmount)}</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-3 px-2 font-bold text-slate-700">Pokok Hutang Murni</td>
-                <td className="py-3 px-2 font-bold text-right text-slate-900">{toIDR(result.principalPure)}</td>
-              </tr>
+        <div className="flex flex-col">
+          
+          {/* Detail Table */}
+          <div className="p-6">
+            <div className="border rounded-none overflow-hidden">
+              <table className="w-full text-sm">
+                <tbody className="divide-y divide-slate-200">
+                  <tr>
+                    <td className="py-3 px-4 text-slate-700 font-bold">Harga Kendaraan</td>
+                    <td className="py-3 px-4 font-bold text-right text-slate-800">{toIDR(result.vehiclePrice)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-500">Uang Muka ({result.dpPercentCalc.toFixed(2)}%)</td>
+                    <td className="py-3 px-4 text-right font-medium text-slate-700">{toIDR(result.dpAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-700 font-bold">Pokok Hutang Murni</td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800">{toIDR(result.principalPure)}</td>
+                  </tr>
 
-              {/* AR */}
-              <tr className="border-b">
-                <td className="py-2 px-2 pl-4 text-slate-500 flex flex-col">
-                    <span>Premi Asuransi ({toPct(result.insuranceRatePct)})</span>
-                    <span className="text-[10px] text-blue-600 font-bold uppercase">{form.selectedInsuranceLabel}</span>
-                </td>
-                <td className="py-2 px-2 text-right text-slate-500">{toIDR(result.insuranceAmount)}</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-2 px-2 pl-4 text-slate-500">+ Biaya Polis (AR)</td>
-                <td className="py-2 px-2 text-right text-slate-500">{toIDR(result.policyFee)}</td>
-              </tr>
-              <tr className="border-b-2 border-blue-200 bg-blue-50">
-                <td className="py-3 px-2 font-bold text-blue-800">Total AR (Awal)</td>
-                <td className="py-3 px-2 font-bold text-right text-blue-800 text-lg">{toIDR(result.totalAR)}</td>
-              </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-500">
+                        <div className="flex flex-col">
+                          <span>Premi Asuransi ({toPct(result.insuranceRatePct)})</span>
+                          <span className="text-[10px] text-blue-600 font-bold uppercase mt-0.5">{form.selectedInsuranceLabel}</span>
+                        </div>
+                    </td>
+                    <td className="py-3 px-4 text-right text-slate-600">{toIDR(result.insuranceAmount)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-500">+ Biaya Polis (AR)</td>
+                    <td className="py-3 px-4 text-right text-slate-600">{toIDR(result.policyFee)}</td>
+                  </tr>
 
-              {/* BUNGA */}
-              <tr className="border-b">
-                <td className="py-2 px-2 pl-4 text-slate-500">Bunga Flat ({toPct(result.interestRatePct)}/thn)</td>
-                <td className="py-2 px-2 text-right text-slate-500">x {form.tenor} Bulan</td>
-              </tr>
-              <tr className="border-b">
-                <td className="py-2 px-2 pl-4 text-slate-500">Total Bunga</td>
-                <td className="py-2 px-2 text-right font-medium">{toIDR(result.totalInterest)}</td>
-              </tr>
-              <tr className="border-b bg-slate-50">
-                <td className="py-3 px-2 font-bold text-slate-700">Jumlah Hutang</td>
-                <td className="py-3 px-2 font-bold text-right text-slate-900">{toIDR(result.totalLoan)}</td>
-              </tr>
-              <tr className="border-b bg-gray-50 border-gray-200">
-                <td className="py-3 px-2 font-bold text-slate-600 italic">Nilai AP (Price - TDP)</td>
-                <td className="py-3 px-2 font-bold text-right text-slate-600 italic">{toIDR(result.nilaiAP)}</td>
-              </tr>
+                  {/* Total AR Row - Blue Highlight */}
+                  <tr className="bg-blue-50/50 border-t-2 border-blue-100">
+                    <td className="py-3 px-4 text-blue-800 font-bold">Total AR (Awal)</td>
+                    <td className="py-3 px-4 text-right text-blue-800 font-bold text-lg">{toIDR(result.totalAR)}</td>
+                  </tr>
 
-              {/* ANGSURAN */}
-              <tr className={`border-b ${form.mode === 'BUDGET' && form.targetType === 'INSTALLMENT' ? 'bg-green-100' : 'bg-yellow-50'}`}>
-                <td className="py-4 px-2 font-bold text-slate-800 text-lg">Angsuran per Bulan</td>
-                <td className="py-4 px-2 font-bold text-right text-orange-600 text-2xl">{toIDR(result.monthlyInstallment)}</td>
-              </tr>
-              {result.isSpecialScenario && (
-                 <tr><td colSpan={2} className="text-xs text-red-500 text-right font-bold pr-2">*Promo: Tenor dibagi {result.installmentDivisor}</td></tr>
-              )}
+                  <tr>
+                    <td className="py-3 px-4 text-slate-500">Bunga Flat ({toPct(result.interestRatePct)}/thn)</td>
+                    <td className="py-3 px-4 text-right text-slate-600">x {form.tenor} Bulan</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-500">Total Bunga</td>
+                    <td className="py-3 px-4 text-right text-slate-600">{toIDR(result.totalInterest)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-700 font-bold">Jumlah Hutang</td>
+                    <td className="py-3 px-4 text-right font-bold text-slate-800">{toIDR(result.totalLoan)}</td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4 text-slate-500 italic">Nilai AP (Price - TDP)</td>
+                    <td className="py-3 px-4 text-right text-slate-500 italic">{toIDR(result.nilaiAP)}</td>
+                  </tr>
 
-              {/* TDP */}
-              <tr><td colSpan={2} className="py-4"></td></tr>
-              <tr className="bg-slate-800 text-white">
-                <td colSpan={2} className="py-2 px-4 font-bold uppercase text-xs">Rincian Pembayaran Pertama (TDP)</td>
-              </tr>
-              <tr className="border-b">
-                 <td className="py-2 px-4 text-slate-500">Uang Muka (DP)</td>
-                 <td className="py-2 px-4 text-right font-medium">{toIDR(result.dpAmount)}</td>
-              </tr>
-              <tr className="border-b">
-                 <td className="py-2 px-4 text-slate-500">Biaya Admin</td>
-                 <td className="py-2 px-4 text-right font-medium">{toIDR(result.adminFee)}</td>
-              </tr>
-              <tr className="border-b">
-                 <td className="py-2 px-4 text-slate-500">Biaya Polis (TDP)</td>
-                 <td className="py-2 px-4 text-right font-medium">{toIDR(result.policyFeeTDP)}</td>
-              </tr>
-              {form.paymentType === 'ADDM' && (
-                <tr className="border-b bg-yellow-50/50">
-                   <td className="py-2 px-4 text-slate-500">Angsuran Pertama</td>
-                   <td className="py-2 px-4 text-right font-medium">{toIDR(result.firstInstallment)}</td>
-                </tr>
-              )}
-              <tr className={`bg-slate-100 ${form.mode === 'BUDGET' && form.targetType === 'TDP' ? 'bg-green-100' : ''}`}>
-                 <td className="py-3 px-4 font-bold text-slate-800">TOTAL BAYAR (TDP)</td>
-                 <td className="py-3 px-4 font-bold text-right text-slate-900 text-xl">{toIDR(result.totalDownPayment)}</td>
-              </tr>
-            </tbody>
-          </table>
+                  {/* Angsuran Highlight */}
+                  <tr className="bg-orange-50 border-y-2 border-orange-100">
+                    <td className="py-3 px-3 lg:py-4 lg:px-4 text-slate-800 font-bold text-sm lg:text-lg">Angsuran per Bulan</td>
+                    <td className="py-3 px-3 lg:py-4 lg:px-4 text-right text-orange-600 font-bold text-lg lg:text-2xl">{toIDR(result.monthlyInstallment)}</td>
+                  </tr>
+                  <tr>
+                    <td colSpan={2} className="py-1 px-4 text-right text-[10px] text-red-500 font-medium">*Promo: Tenor dibagi 10</td>
+                  </tr>
+
+                </tbody>
+              </table>
+            </div>
+
+            {/* TDP Section - Separated */}
+            <div className="mt-8 border rounded-none overflow-hidden">
+                <div className="bg-slate-800 text-white py-2 px-4 text-xs font-bold uppercase tracking-wider">
+                    RINCIAN PEMBAYARAN PERTAMA (TDP)
+                </div>
+                <table className="w-full text-sm">
+                    <tbody className="divide-y divide-slate-200">
+                        <tr>
+                            <td className="py-3 px-4 text-slate-500">Uang Muka (DP)</td>
+                            <td className="py-3 px-4 text-right font-medium text-slate-700">{toIDR(result.dpAmount)}</td>
+                        </tr>
+                        <tr>
+                            <td className="py-3 px-4 text-slate-500">Biaya Admin</td>
+                            <td className="py-3 px-4 text-right font-medium text-slate-700">{toIDR(result.adminFee)}</td>
+                        </tr>
+                        <tr>
+                            <td className="py-3 px-4 text-slate-500">Biaya Polis (TDP)</td>
+                            <td className="py-3 px-4 text-right font-medium text-slate-700">{toIDR(result.policyFeeTDP)}</td>
+                        </tr>
+                        {form.paymentType === 'ADDM' && (
+                            <tr>
+                                <td className="py-3 px-4 text-slate-500">Angsuran Pertama (ADDM)</td>
+                                <td className="py-3 px-4 text-right font-medium text-slate-700">{toIDR(result.firstInstallment)}</td>
+                            </tr>
+                        )}
+                        <tr className="bg-green-100">
+                            <td className="py-4 px-4 text-green-800 font-bold">TOTAL BAYAR (TDP)</td>
+                            <td className="py-4 px-4 text-right text-green-900 font-bold text-xl">{toIDR(result.totalDownPayment)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+          </div>
+
+          {/* Action Footer */}
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
+            >
+              {isSaving ? <Loader2 className="animate-spin w-4 h-4"/> : <Save className="w-4 h-4"/>}
+              {isSaving ? 'Menyimpan...' : 'Simpan Simulasi'}
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -35,7 +35,7 @@ export const useAuth = () => {
 
   const logout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
+    router.push('/pages/login');
     router.refresh();
   };
 

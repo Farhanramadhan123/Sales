@@ -10,7 +10,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Jika akses halaman Login tapi sudah punya session -> Lempar ke Home
-  if (pathname === '/login') {
+  if (pathname === '/pages/login') {
     if (session) {
       try {
         await jwtVerify(session, SECRET_KEY);
@@ -24,17 +24,17 @@ export async function middleware(request: NextRequest) {
 
   // 2. Jika akses halaman dilindungi tapi belum login -> Lempar ke Login
   if (!session) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/pages/login', request.url));
   }
 
   try {
     await jwtVerify(session, SECRET_KEY);
     return NextResponse.next();
   } catch (error) {
-    return NextResponse.redirect(new URL('/login', request.url));
+    return NextResponse.redirect(new URL('/pages/login', request.url));
   }
 }
 
 export const config = {
-  matcher: ['/', '/history'],
+  matcher: ['/', '/pages/history', '/pages/simulation'],
 };
