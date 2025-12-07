@@ -2,7 +2,6 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
 import { AppData, SimulationForm, CalculationResult, AttachmentItem } from '../types/simulation';
 
 // --- DATABASE RATE KHUSUS WILAYAH 3 (HARDCODED RULE) ---
@@ -66,8 +65,6 @@ const compressImage = async (file: File, quality = 0.7, maxWidth = 1024): Promis
 };
 
 export const useCreditSimulation = () => {
-  const router = useRouter();
-  
   const [dbData, setDbData] = useState<AppData | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

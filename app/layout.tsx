@@ -1,9 +1,9 @@
+// app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-// @ts-ignore
 import "./globals.css";
-import Navbar from "./components/Navbar"; // Import Navbar
-import Footer from "./components/Footer"; // Import Footer
+import Navbar from "./components/Navbar"; 
+import Footer from "./components/Footer"; 
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -18,8 +18,10 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "GASPOL System",
   description: "Aplikasi Simulasi Kredit",
+  manifest: "/manifest.json", 
   icons: {
     icon: '/GASPOL.png',
+    apple: '/GASPOL.png', 
   },
 };
 

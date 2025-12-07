@@ -1,0 +1,24 @@
+{
+  "name": "GASPOL System",
+  "short_name": "GASPOL",
+  "description": "Aplikasi Simulasi Kredit",
+  "icons": [
+    {
+      "src": "/GASPOL.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/GASPOL.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait"
+}
