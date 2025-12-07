@@ -5,7 +5,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { AppData, SimulationForm, CalculationResult, AttachmentItem } from '../types/simulation';
 
-// --- DATABASE RATE KHUSUS WILAYAH 3 ---
+// --- DATABASE RATE KHUSUS WILAYAH 3 (HARDCODED RULE) ---
 const WILAYAH_3_RATES = [
   { max: 125000000, rates: { 1: 0.0315, 2: 0.03978, 3: 0.04714, 4: 0.05358, 5: 0.06002 } },
   { max: 138888889, rates: { 1: 0.0278, 2: 0.03608, 3: 0.04344, 4: 0.04988, 5: 0.05632 } },
@@ -29,11 +29,7 @@ const getWilayah3Rate = (price: number, tenorMonths: number) => {
 // --- HELPER: KOMPRESI GAMBAR ---
 const compressImage = async (file: File, quality = 0.7, maxWidth = 1024): Promise<string> => {
   return new Promise((resolve, reject) => {
-    console.log(`[Compress] Memulai proses untuk: ${file.name} (${file.type})`);
-
-    // Jika bukan gambar (misal PDF), langsung convert Base64 biasa
     if (!file.type.startsWith('image/')) {
-        console.log(`[Compress] File bukan gambar, skip resize.`);
         const reader = new FileReader();
         reader.readAsDataURL(file);
         reader.onload = () => resolve(reader.result as string);
@@ -45,15 +41,12 @@ const compressImage = async (file: File, quality = 0.7, maxWidth = 1024): Promis
     image.src = URL.createObjectURL(file);
     
     image.onload = () => {
-      console.log(`[Compress] Gambar dimuat. Dimensi asli: ${image.width}x${image.height}`);
       const canvas = document.createElement('canvas');
       let { width, height } = image;
 
-      // Resize jika terlalu besar
       if (width > maxWidth) {
         height = Math.round((height * maxWidth) / width);
         width = maxWidth;
-        console.log(`[Compress] Resize menjadi: ${width}x${height}`);
       }
 
       canvas.width = width;
@@ -61,19 +54,14 @@ const compressImage = async (file: File, quality = 0.7, maxWidth = 1024): Promis
       const ctx = canvas.getContext('2d');
       if (ctx) {
         ctx.drawImage(image, 0, 0, width, height);
-        // Kompresi ke JPEG
         const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-        console.log(`[Compress] Selesai. Panjang string: ${compressedDataUrl.length}`);
         resolve(compressedDataUrl);
       } else {
         reject(new Error("Gagal membuat context canvas"));
       }
     };
     
-    image.onerror = (error) => {
-        console.error("[Compress] Error saat load image:", error);
-        reject(error);
-    };
+    image.onerror = (error) => reject(error);
   });
 };
 
@@ -85,6 +73,7 @@ export const useCreditSimulation = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState<boolean>(false);
 
+  // --- STATE FORM ---
   const [form, setForm] = useState<SimulationForm>({
     mode: 'NORMAL',
     targetType: 'TDP',
@@ -100,7 +89,7 @@ export const useCreditSimulation = () => {
     subCategory: 'PASSENGER', 
     isLoadingUnit: false,
     price: 0,
-    dpPercent: 20,
+    dpPercent: 20, // Default DP
     tenor: 12,
     paymentType: 'ADDB',
     adminFee: 3000000, 
@@ -108,8 +97,6 @@ export const useCreditSimulation = () => {
   });
 
   const [result, setResult] = useState<CalculationResult | null>(null);
-  
-  // State untuk Modal
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -118,6 +105,7 @@ export const useCreditSimulation = () => {
     return Math.round(num / multiple) * multiple;
   };
 
+  // 1. Fetch Data Rate dari Database saat load
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -135,11 +123,13 @@ export const useCreditSimulation = () => {
     fetchData();
   }, []);
 
+  // 2. Tentukan Tenor yang tersedia berdasarkan kategori
   const availableTenors = useMemo(() => {
     if (form.category === 'COMMERCIAL') return [12, 24, 36, 48]; 
     return [12, 24, 36, 48, 60]; 
   }, [form.category]);
 
+  // 3. Filter Opsi Asuransi berdasarkan harga & kategori
   const availableInsuranceOptions = useMemo(() => {
     if (!dbData || form.price <= 0) return [];
     const tenorInYears = form.tenor / 12;
@@ -163,6 +153,7 @@ export const useCreditSimulation = () => {
     return filtered.sort((a, b) => a.rate - b.rate);
   }, [dbData, form.category, form.subCategory, form.tenor, form.price, form.isLoadingUnit]);
 
+  // Auto-select asuransi pertama jika belum dipilih
   useEffect(() => {
     if (availableInsuranceOptions.length > 0) {
       const currentExists = availableInsuranceOptions.some(i => i.label === form.selectedInsuranceLabel);
@@ -174,10 +165,12 @@ export const useCreditSimulation = () => {
     }
   }, [availableInsuranceOptions, form.selectedInsuranceLabel]);
 
+  // --- LOGIKA UTAMA PERHITUNGAN ---
   const calculateFinancials = useCallback((overrideDpPercent: number): CalculationResult | null => {
     if (!dbData) return null;
     const { price, tenor, category, paymentType, adminFee, selectedInsuranceLabel } = form;
 
+    // 1. Tentukan STAR LEVEL berdasarkan DP (Aturan Bisnis)
     let starLevel = 1;
     if (overrideDpPercent >= 30) starLevel = 7;
     else if (overrideDpPercent >= 25) starLevel = 6;
@@ -186,9 +179,11 @@ export const useCreditSimulation = () => {
     else if (overrideDpPercent >= 10) starLevel = 3;
     else if (overrideDpPercent >= 5)  starLevel = 2;
 
+    // 2. Ambil Rate Asuransi
     const selectedIns = availableInsuranceOptions.find(i => i.label === selectedInsuranceLabel);
     const insuranceRatePct = selectedIns ? selectedIns.rate : 0.0;
 
+    // 3. Ambil Rate Bunga DARI DATABASE berdasarkan Star Level yang sudah dihitung di atas
     const lookupStar = starLevel === 1 ? 1 : starLevel; 
     
     const foundInt = dbData.interestRates.find(item => 
@@ -197,10 +192,11 @@ export const useCreditSimulation = () => {
       item.star === lookupStar &&
       item.tenor === tenor
     );
-    let interestRatePct = foundInt ? foundInt.rate : 0.0885; 
+    const interestRatePct = foundInt ? foundInt.rate : 0.0885;
 
+    // 4. Hitung Komponen
     let finalInsuranceRatePct = 0;
-    const isSpecialScenario = (starLevel === 1); 
+    const isSpecialScenario = (starLevel === 1);
 
     if (isSpecialScenario) {
         finalInsuranceRatePct = getWilayah3Rate(price, tenor);
@@ -239,6 +235,7 @@ export const useCreditSimulation = () => {
         totalDownPayment = (monthlyInstallment * 2) + adminFee + policyFeeTDP;
 
     } else {
+        // Logika Normal
         dpAmount = price * (overrideDpPercent / 100);
         principalPure = price - dpAmount;
         insuranceAmount = price * finalInsuranceRatePct;
@@ -257,6 +254,7 @@ export const useCreditSimulation = () => {
         } else {
             firstInstallment = 0;
         }
+        // Total Bayar Pertama (TDP)
         totalDownPayment = dpAmount + adminFee + policyFeeTDP + firstInstallment;
     }
 
@@ -287,39 +285,64 @@ export const useCreditSimulation = () => {
     };
   }, [dbData, form, availableInsuranceOptions]);
 
+  // --- SOLVER BUDGET (Binary Search) ---
   const solveBudget = () => {
      if (form.targetValue <= 0 || form.price <= 0) return;
-     let low = 0, high = 99, bestResult = null, minDiff = Number.MAX_VALUE;
+     
+     let low = 5, high = 90, bestResult = null, minDiff = Number.MAX_VALUE;
 
-     for (let i = 0; i < 50; i++) {
-         const mid = (low + high) / 2;
-         const res = calculateFinancials(mid);
+     for (let i = 0; i < 60; i++) {
+         const midDp = (low + high) / 2;
+         
+         const res = calculateFinancials(midDp);
          if (!res) break;
 
+         // Cek nilai saat ini (Entah TDP atau Angsuran)
          const currentVal = form.targetType === 'TDP' ? res.totalDownPayment : res.monthlyInstallment;
          const diff = Math.abs(currentVal - form.targetValue);
 
+         // Simpan hasil terbaik jika selisihnya mengecil
          if (diff < minDiff) { minDiff = diff; bestResult = res; }
 
          if (form.targetType === 'TDP') {
-             if (currentVal < form.targetValue) low = mid; else high = mid;
+             
+             if (currentVal < form.targetValue) {
+                 low = midDp;
+             } else {
+                 high = midDp;
+             }
          } else {
-             if (currentVal > form.targetValue) low = mid; else high = mid;
+             
+             if (currentVal > form.targetValue) {
+                 low = midDp; 
+             } else {
+                 high = midDp;
+             }
          }
      }
-     if (bestResult) setResult(bestResult);
+     
+     if (bestResult) {
+         setResult(bestResult);
+     } else {
+         setValidationError("Tidak dapat menemukan rekomendasi DP yang sesuai dengan range harga & tenor ini.");
+     }
   };
 
-  // --- HANDLER FILE DENGAN DEBUG LOG ---
+  // --- AUTO CALC (Mode Normal) ---
+  useEffect(() => {
+    if (form.mode === 'NORMAL' && dbData && form.price > 0) {
+      // Di mode normal, kita pakai DP dari input user langsung
+      const res = calculateFinancials(form.dpPercent);
+      setResult(res);
+    }
+  }, [form.mode, form.price, form.dpPercent, form.tenor, form.category, form.subCategory, form.paymentType, form.isLoadingUnit, form.adminFee, form.selectedInsuranceLabel, calculateFinancials, dbData]);
+
+  // --- HANDLER FILE, INPUT, SAVE (Tidak berubah) ---
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("--> handleFileChange dipicu");
-    
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-      console.log(`--> Menerima ${newFiles.length} file:`, newFiles.map(f => f.name));
-      
-      const MAX_INPUT_SIZE = 15 * 1024 * 1024; // 15 MB
-      const MAX_PDF_SIZE = 3 * 1024 * 1024;    // 3 MB
+      const MAX_INPUT_SIZE = 15 * 1024 * 1024;
+      const MAX_PDF_SIZE = 3 * 1024 * 1024;
 
       const validFiles = newFiles.filter(f => {
           if (f.type === 'application/pdf' && f.size > MAX_PDF_SIZE) {
@@ -333,43 +356,31 @@ export const useCreditSimulation = () => {
           return true;
       });
 
-      console.log(`--> File valid yang akan diproses: ${validFiles.length}`);
-
-      setIsSaving(true); // Indikator loading
+      setIsSaving(true);
       const processedFiles: AttachmentItem[] = [];
 
       try {
         for (const file of validFiles) {
-            console.log(`--> Memproses: ${file.name}`);
             const base64 = await compressImage(file, 0.6, 1024);
-            
             processedFiles.push({
                 name: file.name,
                 type: file.type,
                 size: Math.round(base64.length * 0.75), 
                 base64: base64
             });
-            console.log(`--> Berhasil proses: ${file.name}`);
         }
         
-        console.log("--> Semua file selesai diproses. Update state form...");
-        setForm(prev => {
-            const newState = {
-                ...prev,
-                attachments: [...prev.attachments, ...processedFiles]
-            };
-            console.log("--> New State Attachments Length:", newState.attachments.length);
-            return newState;
-        });
+        setForm(prev => ({
+            ...prev,
+            attachments: [...prev.attachments, ...processedFiles]
+        }));
 
       } catch (error) {
-        console.error("--> ERROR Gagal memproses file:", error);
-        alert("Gagal memproses file gambar.");
+        console.error("Gagal memproses file:", error);
+        alert("Gagal memproses file.");
       } finally {
         setIsSaving(false);
       }
-    } else {
-        console.log("--> Tidak ada file yang dipilih (e.target.files kosong)");
     }
   };
 
@@ -381,15 +392,11 @@ export const useCreditSimulation = () => {
   }
 
   const handleSave = async () => {
-    console.log("--> Tombol Simpan Ditekan");
-    
-    // Reset state modal
     setValidationError(null);
     setSaveSuccess(false);
 
     if (!result) return;
     
-    // Validasi Data Nasabah
     if (!form.borrowerName || !form.salesName) { 
         setValidationError("Mohon lengkapi Nama Nasabah dan Nama Sales sebelum menyimpan simulasi."); 
         return; 
@@ -398,36 +405,22 @@ export const useCreditSimulation = () => {
     setIsSaving(true);
     try {
         const attachmentJson = JSON.stringify(form.attachments);
-        
-        // Cek Payload
         const payloadSize = new Blob([attachmentJson]).size;
-        console.log(`--> Ukuran Payload Attachments: ${(payloadSize/1024).toFixed(2)} KB`);
 
         if (payloadSize > 4.5 * 1024 * 1024) {
-            throw new Error(`Total ukuran file terlalu besar (${(payloadSize/1024/1024).toFixed(1)}MB). Vercel limit 4.5MB.`);
+            throw new Error(`Total ukuran file terlalu besar. Batas maksimum upload sekitar 4.5MB total.`);
         }
 
         const payload = {
             ...form,
             attachments: attachmentJson, 
-
-            dpAmount: result.dpAmount,
-            monthlyPayment: result.monthlyInstallment,
-            totalFirstPay: result.totalDownPayment,
+            ...result, // Spread result values
             interestRate: result.interestRatePct,
             insuranceRate: result.insuranceRatePct,
-            insuranceAmount: result.insuranceAmount,
-            principalPure: result.principalPure,
-            policyFee: result.policyFee,
-            totalAR: result.totalAR,
-            totalInterest: result.totalInterest,
-            totalLoan: result.totalLoan,
-            policyFeeTDP: result.policyFeeTDP,
-            firstInstallment: result.firstInstallment,
-            nilaiAP: result.nilaiAP
+            monthlyPayment: result.monthlyInstallment,
+            totalFirstPay: result.totalDownPayment
         };
 
-        console.log("--> Mengirim ke API...");
         const res = await fetch('/api/simulation', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -439,11 +432,9 @@ export const useCreditSimulation = () => {
             throw new Error(errData.error || "Gagal menyimpan data");
         }
         
-        console.log("--> Berhasil Simpan!");
         setSaveSuccess(true);
-        // Redirect akan dilakukan via Modal
     } catch (err) {
-        console.error("--> ERROR SAVE:", err);
+        console.error(err);
         setValidationError(err instanceof Error ? err.message : "Terjadi kesalahan saat menyimpan data.");
     } finally {
         setIsSaving(false);
@@ -462,13 +453,6 @@ export const useCreditSimulation = () => {
         setForm(prev => ({ ...prev, [name]: val }));
     }
   };
-
-  useEffect(() => {
-    if (form.mode === 'NORMAL' && dbData && form.price > 0) {
-      const res = calculateFinancials(form.dpPercent);
-      setResult(res);
-    }
-  }, [form.mode, form.price, form.dpPercent, form.tenor, form.category, form.subCategory, form.paymentType, form.isLoadingUnit, form.adminFee, form.selectedInsuranceLabel, calculateFinancials, dbData]);
 
   return {
     form, setForm,
