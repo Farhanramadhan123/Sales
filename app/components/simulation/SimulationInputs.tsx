@@ -57,7 +57,7 @@ export default function SimulationInputs({
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-slate-400 mb-1">SALES</label>
-                  <input type="text" name="salesName" value={form.salesName} onChange={handleChange} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:bg-white focus:ring-2 focus:ring-slate-400 outline-none" placeholder="Nama Sales" />
+                  <input type="text" name="salesName" value={form.salesName} onChange={handleChange} className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:bg-white focus:ring-2 focus:ring-slate-400 outline-none" placeholder="Nama Sales" />
                 </div>
             </div>
 
