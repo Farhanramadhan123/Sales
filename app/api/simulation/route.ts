@@ -1,3 +1,4 @@
+// app/api/simulation/route.ts
 import { NextResponse } from 'next/server';
 import { PrismaClient } from '@prisma/client';
 
@@ -16,6 +17,10 @@ export async function POST(request: Request) {
         coBorrowerName: body.coBorrowerName,
         salesName: body.salesName,
         status: body.status,
+        
+        // -- NEW: Attachments (String) --
+        attachments: body.attachments,
+
         unitName: body.unitName,
         nopol: body.nopol,
         category: body.category,
@@ -28,15 +33,15 @@ export async function POST(request: Request) {
         adminFee: parseFloat(body.adminFee),
         insuranceLabel: body.selectedInsuranceLabel,
 
-        // Hasil Hitungan Utama
+        // Hasil Hitungan
         dpAmount: body.dpAmount,
-        monthlyPayment: body.monthlyInstallment,
-        totalFirstPay: body.totalDownPayment,
-        interestRate: body.interestRatePct,
-        insuranceRate: body.insuranceRatePct,
+        monthlyPayment: body.monthlyPayment,
+        totalFirstPay: body.totalFirstPay,
+        interestRate: body.interestRate,
+        insuranceRate: body.insuranceRate,
         insuranceAmount: body.insuranceAmount,
 
-        // TAMBAHAN DATA LENGKAP
+        // Data Lengkap
         principalPure: body.principalPure,
         policyFee: body.policyFee,
         totalAR: body.totalAR,

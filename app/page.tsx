@@ -13,7 +13,9 @@ export default function CreditSimulationPage() {
     result,
     isLoading, errorMsg, isSaving,
     availableTenors, availableInsuranceOptions,
-    handleChange, handleSave, solveBudget
+    // Kita ambil fungsi baru ini dari hook:
+    handleChange, handleSave, solveBudget, 
+    handleFileChange, removeAttachment 
   } = useCreditSimulation();
 
   if (isLoading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin mr-2"/> Memuat Database...</div>;
@@ -56,6 +58,10 @@ export default function CreditSimulationPage() {
               availableTenors={availableTenors}
               availableInsuranceOptions={availableInsuranceOptions}
               solveBudget={solveBudget}
+              
+              // PERBAIKAN: Sambungkan fungsi file ke komponen input
+              handleFileChange={handleFileChange}
+              removeAttachment={removeAttachment}
             />
           </div>
 

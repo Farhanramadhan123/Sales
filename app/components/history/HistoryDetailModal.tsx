@@ -1,15 +1,16 @@
+// app/components/history/HistoryDetailModal.tsx
 "use client";
 
-import React from 'react';
-import { FileText, X } from 'lucide-react';
+import React, { useMemo } from 'react';
+import { FileText, X, Paperclip, Download } from 'lucide-react';
 import { HistoryItem } from '@/app/types/history';
+import { AttachmentItem } from '@/app/types/simulation';
 
 interface Props {
   item: HistoryItem | null;
   onClose: () => void;
 }
 
-// Helper Formatters
 const toIDR = (num: number | null | undefined) => {
   if (num == null) return 'Rp 0';
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -26,13 +27,23 @@ const getStatusColor = (status: string) => {
 };
 
 export default function HistoryDetailModal({ item, onClose }: Props) {
+  // Parse attachment string (JSON) menjadi array object
+  const attachments: AttachmentItem[] = useMemo(() => {
+    if (!item || !item.attachments) return [];
+    try {
+        return JSON.parse(item.attachments);
+    } catch (e) {
+        console.error("Gagal parse attachments", e);
+        return [];
+    }
+  }, [item]);
+
   if (!item) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200 border border-slate-200">
             
-            {/* Header */}
             <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center z-10">
                 <div>
                     <h3 className="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -48,7 +59,6 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                 </button>
             </div>
 
-            {/* Content */}
             <div className="p-6 space-y-6">
                 <div className={`px-4 py-2 rounded text-center text-xs font-bold border ${getStatusColor(item.status)}`}>
                     STATUS: {item.status}
@@ -69,7 +79,6 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                             <td className="py-3 px-2 font-bold text-right text-slate-900">{toIDR(item.principalPure)}</td>
                         </tr>
 
-                        {/* Asuransi & AR */}
                         <tr className="border-b">
                             <td className="py-2 px-2 pl-4 text-slate-500 flex flex-col">
                                 <span>Premi Asuransi ({toPct(item.insuranceRate)})</span>
@@ -86,7 +95,6 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                             <td className="py-3 px-2 font-bold text-right text-blue-800 text-lg">{toIDR(item.totalAR)}</td>
                         </tr>
 
-                        {/* Bunga & PH */}
                         <tr className="border-b">
                             <td className="py-2 px-2 pl-4 text-slate-500">Bunga Flat ({toPct(item.interestRate)}/thn)</td>
                             <td className="py-2 px-2 text-right text-slate-500">x {item.tenor} Bulan</td>
@@ -104,13 +112,11 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                             <td className="py-3 px-2 font-bold text-right text-slate-600 italic">{toIDR(item.nilaiAP)}</td>
                         </tr>
 
-                        {/* Angsuran */}
                         <tr className="border-b bg-yellow-50">
                             <td className="py-4 px-2 font-bold text-slate-800 text-lg">Angsuran per Bulan</td>
                             <td className="py-4 px-2 font-bold text-right text-orange-600 text-2xl">{toIDR(item.monthlyPayment)}</td>
                         </tr>
 
-                        {/* TDP */}
                         <tr><td colSpan={2} className="py-4"></td></tr>
                         <tr className="bg-slate-800 text-white">
                             <td colSpan={2} className="py-2 px-4 font-bold uppercase text-xs">Rincian Pembayaran Pertama (TDP)</td>
@@ -137,6 +143,40 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                             <td className="py-3 px-4 font-bold text-slate-800">TOTAL BAYAR (TDP)</td>
                             <td className="py-3 px-4 font-bold text-right text-slate-900 text-xl">{toIDR(item.totalFirstPay)}</td>
                         </tr>
+
+                        {/* LAMPIRAN DOKUMEN (FROM DB BASE64) */}
+                        <tr><td colSpan={2} className="py-4"></td></tr>
+                        <tr className="bg-blue-50 border-t border-blue-100">
+                            <td colSpan={2} className="py-2 px-4 font-bold uppercase text-xs text-blue-800 flex items-center gap-1">
+                                <Paperclip className="w-3 h-3"/> Lampiran Dokumen
+                            </td>
+                        </tr>
+                        <tr className="bg-white">
+                            <td colSpan={2} className="p-4">
+                                {attachments.length > 0 ? (
+                                    <div className="flex flex-col gap-2">
+                                        {attachments.map((file, idx) => (
+                                            <a 
+                                                key={idx} 
+                                                href={file.base64} // Link langsung ke Base64 Data URI
+                                                download={file.name} // Browser akan download dengan nama ini
+                                                className="flex items-center justify-between text-sm bg-slate-50 p-3 rounded border border-slate-100 hover:bg-slate-100 transition group"
+                                            >
+                                                <div className="flex items-center gap-2 text-slate-700">
+                                                    <FileText className="w-4 h-4 text-blue-500"/> 
+                                                    <span className="font-medium truncate max-w-[200px]">{file.name}</span>
+                                                    <span className="text-[10px] text-slate-400">({(file.size / 1024).toFixed(0)} KB)</span>
+                                                </div>
+                                                <Download className="w-4 h-4 text-slate-400 group-hover:text-blue-600"/>
+                                            </a>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="text-slate-400 text-xs italic text-center">Tidak ada lampiran dokumen.</div>
+                                )}
+                            </td>
+                        </tr>
+
                     </tbody>
                 </table>
             </div>

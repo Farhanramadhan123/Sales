@@ -2,7 +2,7 @@
 "use client";
 
 import React from 'react';
-import { Car, User, Shield } from 'lucide-react';
+import { Car, User, Shield, Paperclip, X } from 'lucide-react';
 import { SimulationForm, DbInsurance } from '@/app/types/simulation';
 
 interface Props {
@@ -12,12 +12,16 @@ interface Props {
   availableTenors: number[];
   availableInsuranceOptions: DbInsurance[];
   solveBudget: () => void;
+  // Handler untuk file
+  handleFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  removeAttachment?: (index: number) => void;
 }
 
 const toPct = (num: number) => (num * 100).toFixed(3) + '%';
 
 export default function SimulationInputs({ 
-  form, setForm, handleChange, availableTenors, availableInsuranceOptions, solveBudget 
+  form, setForm, handleChange, availableTenors, availableInsuranceOptions, solveBudget,
+  handleFileChange, removeAttachment
 }: Props) {
   return (
     <div className="space-y-4">
@@ -28,7 +32,6 @@ export default function SimulationInputs({
         </h3>
         
         <div className="space-y-4">
-          {/* Harga OTR */}
           <div>
             <label className="block text-xs font-bold text-slate-500 mb-1">HARGA OTR</label>
             <input type="number" name="price" value={form.price || ''} onChange={handleChange} className="w-full p-2 border rounded font-bold text-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
@@ -78,7 +81,6 @@ export default function SimulationInputs({
               </div>
           )}
 
-          {/* Kategori */}
           <div>
               <label className="block text-xs font-bold text-slate-500 mb-1">KATEGORI</label>
               <div className="grid grid-cols-2 gap-2 mb-2">
@@ -103,7 +105,6 @@ export default function SimulationInputs({
               )}
           </div>
 
-          {/* Asuransi & Tipe */}
           <div className="bg-blue-50 p-3 rounded border border-blue-100 space-y-3">
               <div>
                   <label className="block text-xs font-bold text-blue-800 mb-1 flex items-center gap-1"><Shield className="w-3 h-3"/> JENIS ASURANSI</label>
@@ -130,7 +131,6 @@ export default function SimulationInputs({
               </div>
           </div>
 
-          {/* Input Lainnya */}
           <div className="space-y-2 pt-2 border-t">
               <input type="text" name="unitName" value={form.unitName} onChange={handleChange} className="w-full p-2 border rounded text-xs" placeholder="Nama Unit" />
               <input type="text" name="nopol" value={form.nopol} onChange={handleChange} className="w-full p-2 border rounded text-xs" placeholder="No. Polisi" />
@@ -138,11 +138,18 @@ export default function SimulationInputs({
         </div>
       </div>
 
-      {/* --- DATA NASABAH --- */}
+      {/* --- DATA NASABAH (NEW UI) --- */}
       <div className="bg-white p-5 rounded shadow-sm border border-slate-200">
           <h3 className="text-xs font-bold text-slate-400 uppercase mb-3 flex items-center gap-2"><User className="w-4 h-4"/> Data Nasabah</h3>
-          <div className="space-y-2">
-            <input type="text" name="borrowerName" value={form.borrowerName} onChange={handleChange} className="w-full p-2 border rounded text-xs" placeholder="Nama Lengkap" />
+          <div className="space-y-3">
+            
+            {/* Nama Nasabah & Co-Borrower */}
+            <div className="space-y-2">
+                <input type="text" name="borrowerName" value={form.borrowerName} onChange={handleChange} className="w-full p-2 border rounded text-xs" placeholder="Nama Nasabah (Borrower)" />
+                <input type="text" name="coBorrowerName" value={form.coBorrowerName} onChange={handleChange} className="w-full p-2 border rounded text-xs" placeholder="Nama Pasangan (Co-Borrower)" />
+            </div>
+
+            {/* Status & Sales */}
             <div className="grid grid-cols-2 gap-2">
                 <select name="status" value={form.status} onChange={handleChange} className="w-full p-2 border rounded text-xs bg-white">
                       <option value="TODO">TODO</option>
@@ -151,6 +158,38 @@ export default function SimulationInputs({
                 </select>
                 <input type="text" name="salesName" value={form.salesName} onChange={handleChange} className="w-full p-2 border rounded text-xs" placeholder="Nama Sales" />
             </div>
+
+            {/* Upload Attachments Area */}
+            <div className="pt-2 border-t border-dashed">
+                <label className="block text-[10px] font-bold text-slate-500 mb-1 flex items-center gap-1">
+                    <Paperclip className="w-3 h-3"/> DOKUMEN (KTP, KK, NPWP)
+                </label>
+                <input 
+                    type="file" 
+                    multiple 
+                    onChange={handleFileChange}
+                    className="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+                />
+                
+                {/* List Preview & Delete Button */}
+                {form.attachments && form.attachments.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                        {form.attachments.map((file, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-[10px] bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                                <span className="truncate max-w-[200px] text-slate-600">{file.name}</span>
+                                <button 
+                                    onClick={() => removeAttachment && removeAttachment(idx)} 
+                                    className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition"
+                                    title="Hapus file"
+                                >
+                                    <X className="w-3 h-3"/>
+                                </button>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
           </div>
       </div>
     </div>

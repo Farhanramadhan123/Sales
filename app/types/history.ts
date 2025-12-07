@@ -5,6 +5,8 @@ export interface HistoryItem {
   salesName: string;
   status: string;
   
+  attachments: string | null; 
+
   // Data Unit
   unitName: string;
   category: string;

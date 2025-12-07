@@ -24,19 +24,26 @@ export interface AppData {
   insuranceRates: DbInsurance[];
 }
 
+// Struktur data untuk file Base64
+export interface AttachmentItem {
+  name: string;
+  type: string;
+  size: number;
+  base64: string;
+}
+
 export interface SimulationForm {
-  // Mode
   mode: 'NORMAL' | 'BUDGET';
   targetType: 'TDP' | 'INSTALLMENT';
   targetValue: number;
 
-  // Nasabah
   borrowerName: string;
   coBorrowerName: string;
   salesName: string;
   status: string;
+  
+  attachments: AttachmentItem[];
 
-  // Unit
   unitName: string;
   nopol: string;
   category: 'PASSENGER' | 'COMMERCIAL';
@@ -44,7 +51,6 @@ export interface SimulationForm {
   isLoadingUnit: boolean;
   price: number;
 
-  // Kredit
   dpPercent: number;
   tenor: number;
   paymentType: 'ADDB' | 'ADDM';

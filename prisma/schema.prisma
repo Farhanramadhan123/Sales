@@ -1,4 +1,4 @@
-// File: prisma/schema.prisma
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -9,58 +9,41 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// =========================================
-// 1. MODEL USER (SALES / ADMIN)
-// =========================================
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   password  String
   name      String?
-  role      String   @default("SALES") // SALES, ADMIN
+  role      String   @default("SALES")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   simulations Simulation[]
 }
 
-// =========================================
-// 2. MODEL RATE ASURANSI (PREMI)
-// =========================================
 model InsuranceRate {
   id        Int     @id @default(autoincrement())
-  
-  category  String  // e.g., "PASSENGER", "COMMERCIAL_USED"
-  tenor     Int     // Tahun
-  label     String  // e.g., "5 THN COMPH"
-  
+  category  String  
+  tenor     Int     
+  label     String  
   minPrice  Float   
   maxPrice  Float   
-  rate      Float   // Desimal (0.0125)
+  rate      Float   
 
   @@index([category, tenor, minPrice, maxPrice])
 }
 
-// =========================================
-// 3. MODEL RATE BUNGA (INTEREST)
-// =========================================
 model InterestRate {
   id           Int     @id @default(autoincrement())
-  
-  category     String  // "PASSENGER", "COMMERCIAL"
-  paymentType  String  // "ADDB", "ADDM"
-  
-  star         Int?    // 1-7
-  tenor        Int     // Bulan (12, 24...)
-  
-  rate         Float   // Bunga Flat per Tahun (desimal)
+  category     String  
+  paymentType  String  
+  star         Int?    
+  tenor        Int     
+  rate         Float   
 
   @@index([category, paymentType, star, tenor])
 }
 
-// =========================================
-// 4. MODEL CONFIG STAR (Optional)
-// =========================================
 model StarConfig {
   id          Int     @id @default(autoincrement())
   starLevel   Int     @unique 
@@ -68,9 +51,6 @@ model StarConfig {
   description String?
 }
 
-// =========================================
-// 5. MODEL HISTORY SIMULASI (LENGKAP)
-// =========================================
 model Simulation {
   id              Int      @id @default(autoincrement())
   
@@ -78,46 +58,48 @@ model Simulation {
   borrowerName    String
   coBorrowerName  String?
   salesName       String?
-  status          String   @default("TODO") // TODO, PROGRES, DONE, REJECT
+  status          String   @default("TODO")
+  
+  // PERUBAHAN: Gunakan LongText untuk menyimpan Base64 File
+  // Format simpan: JSON String -> [{ name: "ktp.jpg", base64: "data:image..." }]
+  attachments     String?  @db.LongText 
 
-  // --- Data Unit & Pilihan ---
+  // --- Data Unit ---
   unitName        String
   nopol           String?
-  category        String   // "PASSENGER", "COMMERCIAL"
-  subCategory     String?  // "TRUCK", "BUS"
+  category        String   
+  subCategory     String?  
   isLoadingUnit   Boolean  @default(false)
   
-  // --- Parameter Kredit (Input) ---
-  vehiclePrice    Float    // Harga OTR
-  dpPercent       Float    // DP Input (%)
-  tenor           Int      // Bulan
-  paymentType     String   // "ADDB", "ADDM"
+  // --- Parameter Kredit ---
+  vehiclePrice    Float    
+  dpPercent       Float    
+  tenor           Int      
+  paymentType     String   
   adminFee        Float 
   insuranceLabel  String?
 
-  // --- Hasil Hitungan (Snapshot Lengkap) ---
-  dpAmount        Float    // Nominal DP Murni
-  monthlyPayment  Float    // Angsuran per Bulan
-  totalFirstPay   Float    // TDP (Total Down Payment)
+  // --- Hasil Hitungan ---
+  dpAmount        Float    
+  monthlyPayment  Float    
+  totalFirstPay   Float    
   
-  interestRate    Float?   // Rate Bunga (%)
-  insuranceRate   Float?   // Rate Asuransi (%)
-  insuranceAmount Float?   // Nominal Asuransi
+  interestRate    Float?   
+  insuranceRate   Float?   
+  insuranceAmount Float?   
   
-  // Field Tambahan agar Data Lengkap
-  principalPure   Float?   // Pokok Hutang Murni (PH Murni)
-  policyFee       Float?   // Biaya Polis (AR)
-  totalAR         Float?   // Total AR (PH Murni + Asuransi + Polis)
-  totalInterest   Float?   // Total Bunga (Rupiah)
-  totalLoan       Float?   // Jumlah Hutang / PH (Total AR + Bunga)
-  policyFeeTDP    Float?   // Biaya Polis di TDP
-  firstInstallment Float?  // Angsuran Pertama (khusus ADDM)
-  nilaiAP         Float?   // Nilai AP (OTR - TDP)
+  principalPure   Float?   
+  policyFee       Float?   
+  totalAR         Float?   
+  totalInterest   Float?   
+  totalLoan       Float?   
+  policyFeeTDP    Float?   
+  firstInstallment Float?  
+  nilaiAP         Float?   
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   
-  // --- Relasi ---
   userId          Int?
   user            User?    @relation(fields: [userId], references: [id])
 }

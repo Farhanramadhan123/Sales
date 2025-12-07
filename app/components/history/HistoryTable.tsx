@@ -1,18 +1,21 @@
+// app/components/history/HistoryTable.tsx
 "use client";
 
 import React from 'react';
-import { User, Eye, Loader2 } from 'lucide-react';
+import { User, Eye, Loader2, Trash2 } from 'lucide-react';
 import { HistoryItem } from '@/app/types/history';
+import { UserSession } from '@/app/hooks/useAuth';
 
 interface Props {
   data: HistoryItem[];
   isLoading: boolean;
   updatingId: number | null;
   handleStatusChange: (id: number, status: string) => void;
+  handleDelete?: (id: number) => void;
   setSelectedItem: (item: HistoryItem) => void;
+  currentUser: UserSession | null;
 }
 
-// --- Helpers Formatting ---
 const toIDR = (num: number | null | undefined) => {
   if (num == null) return 'Rp 0';
   return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
@@ -29,7 +32,9 @@ const getStatusColor = (status: string) => {
   }
 };
 
-export default function HistoryTable({ data, isLoading, updatingId, handleStatusChange, setSelectedItem }: Props) {
+export default function HistoryTable({ 
+  data, isLoading, updatingId, handleStatusChange, handleDelete, setSelectedItem, currentUser 
+}: Props) {
   
   if (isLoading) {
     return <div className="flex justify-center py-20"><Loader2 className="animate-spin w-8 h-8 text-blue-500"/></div>;
@@ -39,13 +44,15 @@ export default function HistoryTable({ data, isLoading, updatingId, handleStatus
     return <div className="text-center py-20 text-slate-400 bg-white rounded shadow border border-dashed">Belum ada data tersimpan.</div>;
   }
 
+  const isProsesor = currentUser?.role === 'PROSESOR';
+
   return (
     <div className="bg-white rounded-lg shadow border overflow-hidden">
       <div className="overflow-x-auto">
         <table className="w-full text-sm text-left">
           <thead className="bg-slate-100 text-slate-600 font-bold uppercase text-xs">
             <tr>
-              <th className="px-4 py-3 text-center">Detail</th>
+              <th className="px-4 py-3 text-center">Aksi</th>
               <th className="px-4 py-3">Tanggal</th>
               <th className="px-4 py-3">Nasabah</th>
               <th className="px-4 py-3">Unit</th>
@@ -58,23 +65,36 @@ export default function HistoryTable({ data, isLoading, updatingId, handleStatus
           <tbody className="divide-y divide-slate-100">
             {data.map((item) => (
               <tr key={item.id} className="hover:bg-slate-50 transition group">
-                {/* Tombol Detail */}
-                <td className="px-4 py-3 text-center">
-                    <button 
-                        onClick={() => setSelectedItem(item)}
-                        className="p-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-100"
-                        title="Lihat Rincian"
-                    >
-                        <Eye className="w-4 h-4"/>
-                    </button>
+                <td className="px-4 py-3 text-center flex justify-center gap-1">
+                    {/* DETAIL: Hanya PROSESOR */}
+                    {isProsesor ? (
+                      <button 
+                          onClick={() => setSelectedItem(item)}
+                          className="p-1.5 bg-blue-50 text-blue-600 rounded-full hover:bg-blue-100 transition shadow-sm border border-blue-100"
+                          title="Lihat Rincian"
+                      >
+                          <Eye className="w-4 h-4"/>
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-slate-300 italic">View Only</span>
+                    )}
+
+                    {/* DELETE: Hanya PROSESOR */}
+                    {isProsesor && handleDelete && (
+                      <button 
+                          onClick={() => handleDelete(item.id)}
+                          className="p-1.5 bg-red-50 text-red-600 rounded-full hover:bg-red-100 transition shadow-sm border border-red-100"
+                          title="Hapus Data"
+                      >
+                          <Trash2 className="w-4 h-4"/>
+                      </button>
+                    )}
                 </td>
                 
-                {/* Tanggal */}
                 <td className="px-4 py-3 text-slate-500 text-xs whitespace-nowrap">
                   {formatDate(item.createdAt)}
                 </td>
 
-                {/* Nasabah */}
                 <td className="px-4 py-3">
                   <div className="font-bold text-slate-800">{item.borrowerName}</div>
                   <div className="text-[10px] text-slate-400 flex items-center gap-1">
@@ -82,18 +102,15 @@ export default function HistoryTable({ data, isLoading, updatingId, handleStatus
                   </div>
                 </td>
 
-                {/* Unit */}
                 <td className="px-4 py-3">
                   <div className="font-medium text-slate-700">{item.unitName}</div>
                   <div className="text-[10px] text-slate-400">{item.tenor} Bulan • DP {item.dpPercent}%</div>
                 </td>
 
-                {/* Angka-angka */}
                 <td className="px-4 py-3 text-right font-medium text-slate-600">{toIDR(item.vehiclePrice)}</td>
                 <td className="px-4 py-3 text-right font-bold text-blue-600">{toIDR(item.totalFirstPay)}</td>
                 <td className="px-4 py-3 text-right font-bold text-orange-600">{toIDR(item.monthlyPayment)}</td>
 
-                {/* Status Dropdown */}
                 <td className="px-4 py-3 text-center">
                   <div className="relative">
                     {updatingId === item.id && (
@@ -104,7 +121,10 @@ export default function HistoryTable({ data, isLoading, updatingId, handleStatus
                     <select 
                         value={item.status} 
                         onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                        className={`w-full text-[10px] font-bold py-1 px-2 rounded border appearance-none cursor-pointer text-center focus:ring-2 focus:ring-blue-500 outline-none transition-colors ${getStatusColor(item.status)}`}
+                        disabled={!isProsesor} // SALES TIDAK BISA GANTI STATUS
+                        className={`w-full text-[10px] font-bold py-1 px-2 rounded border appearance-none text-center focus:ring-2 focus:ring-blue-500 outline-none transition-colors 
+                          ${getStatusColor(item.status)} 
+                          ${!isProsesor ? 'opacity-70 cursor-not-allowed' : 'cursor-pointer'}`}
                     >
                         <option value="TODO">TODO</option>
                         <option value="PROGRES">PROGRES</option>
