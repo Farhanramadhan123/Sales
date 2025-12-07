@@ -33,7 +33,7 @@ export default function Navbar() {
                 />
               </div>
               <span className="font-bold text-2xl tracking-tight text-white">
-                GASPOL!
+                GASPOL System
               </span>
             </div>
             

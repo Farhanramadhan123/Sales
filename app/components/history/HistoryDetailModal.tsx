@@ -76,9 +76,9 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                         <div className="text-xs text-slate-500 mb-1">Harga Kendaraan</div>
                         <div className="font-bold text-slate-900 text-lg">{toIDR(item.vehiclePrice)}</div>
                     </div>
-                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                        <div className="text-xs text-blue-600 mb-1">Total Bayar (TDP)</div>
-                        <div className="font-bold text-blue-800 text-lg">{toIDR(item.totalFirstPay)}</div>
+                    <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
+                        <div className="text-xs text-emerald-600 mb-1">Total Bayar (TDP)</div>
+                        <div className="font-bold text-emerald-800 text-lg">{toIDR(item.totalFirstPay)}</div>
                     </div>
                 </div>
 
@@ -143,7 +143,7 @@ export default function HistoryDetailModal({ item, onClose }: Props) {
                         )}
                         <div className="flex justify-between text-base pt-2 border-t border-slate-200 mt-2">
                             <span className="font-bold text-slate-800">Total Bayar</span>
-                            <span className="font-bold text-blue-600">{toIDR(item.totalFirstPay)}</span>
+                            <span className="font-bold text-emerald-600">{toIDR(item.totalFirstPay)}</span>
                         </div>
                     </div>
                 </div>
